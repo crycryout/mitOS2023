@@ -1,9 +1,7 @@
 #include "kernel/types.h"
-#include "kernel/stat.h"
-#include "kernel/fcntl.h"
 #include "user/user.h"
 int main(int argc, char *argv[]) {
-  char  receive;
+  char receive;
   int pp1[2];
   int pp2[2];
   pipe(pp1);
@@ -16,7 +14,7 @@ int main(int argc, char *argv[]) {
     read(pp2[0], &receive, 1);
     close(pp2[0]);
     fprintf(1, "%d: received ping\n", getpid());
-  }else {
+  } else {
     close(pp2[0]);
     close(pp1[1]);
     write(pp2[1], "b", 1);
