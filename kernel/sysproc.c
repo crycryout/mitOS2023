@@ -91,3 +91,14 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_trace(void)
+{
+  int getmask;
+  struct proc *mp = myproc();
+
+  argint(0,&getmask);
+  mp->mask = getmask;
+  return 0; 
+}
