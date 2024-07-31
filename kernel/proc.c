@@ -146,6 +146,8 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->mask = 0;
+
   return p;
 }
 
@@ -689,4 +691,32 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint64
+getnproc(){
+  uint64 nproc = 0;
+  int i;
+  for(i = 0; i < NPROC; i++){
+    acquire(&proc[i].lock);
+    if(proc[i].state != UNUSED){
+      nproc++;
+    }
+    release(&proc[i].lock);
+  }
+  return nproc;
+}
+
+int 
+sysinfo( uint64 addr){
+  struct sysinfo sf;
+  struct proc *p = myproc();
+  sf.nproc = getnproc();
+  sf.freemem = getfreemem();
+  int result;
+  result = copyout(p->pagetable, addr, (char*)&sf, sizeof(sf));
+  if(result < 0){
+    return -1;
+  }
+  return 0;
 }

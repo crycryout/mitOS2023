@@ -99,6 +99,21 @@ sys_trace(void)
   struct proc *mp = myproc();
 
   argint(0,&getmask);
+  if(getmask < 0)
+    return -1;
   mp->mask = getmask;
   return 0; 
+}
+
+uint64
+sys_sysinfo(void){
+  uint64 p;
+  argaddr(0,&p);
+  struct sysinfo sf;
+  sf.freemem = getfreemem();
+  sf.nproc = getnproc();
+  if(copyout(myproc()->pagetable,p, (char*)&sf, sizeof(sf)) < 0){
+    return -1;
+  }
+  return 0;
 }
