@@ -133,3 +133,21 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+// I have debug so many times until I relize fp isn't the address of return place :( 
+// it is fp -8, and the next fp is at fp -16
+// and I also forget, things to print is *(fp-8) instead of fp-8
+void
+backtrace(){
+  printf("backtrace:\n");
+  uint64 fp ;
+  fp = r_fp();
+  uint64 stop = PGROUNDDOWN(fp);
+  while(fp > stop){
+    uint64 *pra = (uint64*)(fp-8);
+    uint64 ra = *pra;
+    printf("%p\n",ra);
+    uint64* pfp = (uint64*)(fp-16);
+    fp = *pfp;
+  }
+}

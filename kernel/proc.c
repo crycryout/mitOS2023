@@ -540,6 +540,7 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
+  //backtrace();
   struct proc *p = myproc();
   
   // Must acquire p->lock in order to
