@@ -449,3 +449,33 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+// print a single pagetable entry.
+void pteprint(pte_t* pte,int level,int n){
+  printf("..");
+  for(int i = level; i < 2; i++){
+    printf(" ..");
+  }
+  printf("%d: pte %p pa %p\n",n,*pte,PTE2PA(*pte));
+}
+
+//print a whole pagetable recursively
+void ptprint(pagetable_t p, int level){
+  pte_t *pte = (pte_t *)p;
+  for(int i = 0; i < PGSIZE/sizeof(pte_t);i++){
+    if((*pte) & PTE_V){
+      pteprint(pte,  level, i);
+      if(level > 0){
+        ptprint((pagetable_t)PTE2PA(*pte), level-1);
+      }
+    }
+    pte += 1;
+  }
+}
+
+// print a whole page table.
+void vmprint(pagetable_t p){
+  int level = 2;
+  printf("page table %p\n",p);
+  ptprint(p, level);
+}
