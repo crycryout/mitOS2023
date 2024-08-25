@@ -237,6 +237,26 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
   uvmfree(pagetable, sz);
 }
 
+
+//clear the PTE_A of a specific pte.
+void pteaclear(pte_t *pte){
+  *pte = *pte & (~PTE_A); 
+}
+
+//to detect which page has been accessed 
+void pgaccess(uint64 base, int num, uint64 mask){
+  uint64 abits = 0;
+  pagetable_t p = myproc()->pagetable;
+  for(int i = 0; i < num ;i++){
+    pte_t *pte = walk(p, base, 0);
+    if(*pte & PTE_A){
+      abits = abits | (1 << i);
+      pteaclear(pte); 
+    } 
+    base += PGSIZE; 
+  }
+  copyout(p, mask, (char*)&abits, sizeof(abits));
+}
 // a user program that calls exec("/init")
 // assembled from ../user/initcode.S
 // od -t xC ../user/initcode

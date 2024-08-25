@@ -75,6 +75,16 @@ int
 sys_pgaccess(void)
 {
   // lab pgtbl: your code here.
+  uint64 base;
+  uint64 abits;
+  int number;
+  argaddr(0, &base);
+  argint(1, &number);
+  argaddr(2,&abits);
+  if(number > 64){
+    panic("pgaccess : too many pages to detect");
+  }
+  pgaccess(base, number, abits);  
   return 0;
 }
 #endif
