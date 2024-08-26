@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include <time.h>
 
 struct cpu cpus[NCPU];
 
@@ -146,6 +147,10 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->ticks = 0;
+  p->handler = NULL;
+  p->pastticks = 0;
+  
   return p;
 }
 

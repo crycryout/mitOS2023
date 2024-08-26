@@ -77,8 +77,23 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
     yield();
+    struct proc * p = myproc();
+    if(p->ticks > 0){
+      p->pastticks++;
+      //if(p->pastticks > p->ticks){
+      p->trapframe->epc = (uint64)p->handler;  
+      p->pastticks = 0;
+      //}
+    }else{
+      if(p->ticks == 0){
+        p->pastticks = 0;
+      }else{
+        panic("sigalarm: with a negtive argument.");
+      }
+    }
+  }
 
   usertrapret();
 }
