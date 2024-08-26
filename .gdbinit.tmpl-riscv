@@ -7,5 +7,6 @@ set riscv use-compressed-breakpoints yes
 
 layout src
 file user/_alarmtest
+file kernel/kernel
 
  

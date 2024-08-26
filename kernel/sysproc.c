@@ -103,9 +103,13 @@ sys_sigalarm(void){
   struct proc * p = myproc();
   p->ticks = ticks;
   p->handler = handler;
+  p->pastticks = 0; 
   return 0;
 }
 
 uint64 sys_sigreturn(void){
+  struct proc * p = myproc();
+  *(p->trapframe) = *(p->savedframe);
+  p->inalarm = 0;
   return 0;
 }

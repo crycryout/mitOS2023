@@ -106,5 +106,7 @@ struct proc {
   int ticks;
   void (*handler)();
   int pastticks;
+  struct trapframe *savedframe;
+  uint64 inalarm;
   char name[16];               // Process name (debugging)
 };

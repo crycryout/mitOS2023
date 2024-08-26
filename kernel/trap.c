@@ -82,10 +82,12 @@ usertrap(void)
     struct proc * p = myproc();
     if(p->ticks > 0){
       p->pastticks++;
-      //if(p->pastticks > p->ticks){
-      p->trapframe->epc = (uint64)p->handler;  
-      p->pastticks = 0;
-      //}
+      if(p->pastticks > p->ticks && p->inalarm == 0){
+        p->inalarm = 1;
+        *(p->savedframe) = *(p->trapframe);
+        p->trapframe->epc = (uint64)p->handler;  
+        p->pastticks = 0;
+      }
     }else{
       if(p->ticks == 0){
         p->pastticks = 0;
