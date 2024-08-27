@@ -65,6 +65,8 @@ usertrap(void)
     intr_on();
 
     syscall();
+  }else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
+  //different kinds of page fault
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
