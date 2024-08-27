@@ -136,13 +136,21 @@ void
 syscall(void)
 {
   int num;
+  int is_not_sigreturn = 1;
+  int temp;
   struct proc *p = myproc();
 
   num = p->trapframe->a7;
+  if(num == SYS_sigreturn){
+    is_not_sigreturn = 0; 
+  }
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
+    temp = syscalls[num]();
+    if(is_not_sigreturn){
+      p->trapframe->a0 = temp;
+    }
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
