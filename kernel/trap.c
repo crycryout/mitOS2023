@@ -14,6 +14,8 @@ extern char trampoline[], uservec[], userret[];
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
+void page_fault();
+
 extern int devintr();
 
 void
@@ -65,8 +67,8 @@ usertrap(void)
     intr_on();
 
     syscall();
-  }else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
-  //different kinds of page fault
+  }else if( r_scause() == 15){ //only a store page fault should allocate new page table
+    page_fault();
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
@@ -221,3 +223,32 @@ devintr()
   }
 }
 
+void page_fault(){
+  struct proc *p = myproc();  
+  uint va = r_stval();
+  va = PGROUNDDOWN(va);
+  pte_t * pte = walk(p->pagetable, va, 0);
+  uint64 pa = PTE2PA(*pte);
+  int flags;
+  
+  if(*pte & PTE_M){
+    
+    if(*pte & PTE_X){
+      kill(p->pid);
+    }
+    
+    if(!(*pte & PTE_W)){
+      void* mem = kalloc();
+      if(mem == 0){
+        kill(p->pid);
+      }
+      
+      memmove(mem, (void*)pa, PGSIZE);
+      flags = PTE_FLAGS(*pte);
+      flags = flags | PTE_W;
+      flags = flags & (~PTE_M);
+      uvmunmap(p->pagetable, va, 1, 0);
+      mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags);
+    }
+  }
+}

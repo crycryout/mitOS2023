@@ -21,6 +21,7 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
+  //char array[(uint64)1<<60];
 } kmem;
 
 void

@@ -312,19 +312,19 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
-  pte_t *pteo;//father pte.
-  pte_t *pten;//son pte.
+  pte_t *pte;
+  pte_t *pten;
   uint64  i;
 
   for(i = 0; i < sz; i += PGSIZE){
-    if((pteo = walk(old, i, 0)) == 0)
+    if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pteo & PTE_V) == 0)
+    if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
-    *pteo = *pteo & (~PTE_W);
     if((pten = walk(new,i,1)) == 0)
-      panic("uvmcopy: new pte allocation failed");
-    *pten = *pteo;  
+      panic("uvmcopy: new pagetable allocation failed.");
+    *pte = (*pte & (~PTE_W)) | PTE_M;
+    *pten = *pte;
   }
   return 0;
 }
