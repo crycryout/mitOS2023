@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -350,6 +352,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
   pte_t *pte;
+  int flags;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
@@ -357,8 +360,29 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       return -1;
     pte = walk(pagetable, va0, 0);
     if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0 ||
-       (*pte & PTE_W) == 0)
-      return -1;
+       (*pte & PTE_W) == 0){
+      if(*pte & PTE_M)
+        return -1;
+      else{
+        if(*pte & PTE_X){
+          kill(myproc()->pid);
+        }
+        // this is similar to the page fault handler process.
+        if(!(*pte & PTE_W)){
+          void *mem = kalloc();
+          if(mem == 0){
+            kill(myproc()->pid);
+          }else{
+            memmove(mem, (void *)pa0, PGSIZE*n);
+            flags = PTE_FLAGS(*pte);
+            flags = flags | PTE_W;
+            flags = flags & (~PTE_M);
+            uvmunmap(myproc()->pagetable, va0, n, 0);
+            mappages(myproc()->pagetable, va0, n*PGSIZE,(uint64)mem, flags);
+          }
+        }
+      }
+    }
     pa0 = PTE2PA(*pte);
     n = PGSIZE - (dstva - va0);
     if(n > len)

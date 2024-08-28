@@ -241,14 +241,14 @@ void page_fault(){
       void* mem = kalloc();
       if(mem == 0){
         kill(p->pid);
+      }else{
+        memmove(mem, (void*)pa, PGSIZE);
+        flags = PTE_FLAGS(*pte);
+        flags = flags | PTE_W;
+        flags = flags & (~PTE_M);
+        uvmunmap(p->pagetable, va, 1, 0);
+        mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags); 
       }
-      
-      memmove(mem, (void*)pa, PGSIZE);
-      flags = PTE_FLAGS(*pte);
-      flags = flags | PTE_W;
-      flags = flags & (~PTE_M);
-      uvmunmap(p->pagetable, va, 1, 0);
-      mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags);
     }
   }
 }
