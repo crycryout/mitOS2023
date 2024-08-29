@@ -112,11 +112,8 @@ e1000_transmit(struct mbuf *m)
     }
     tx_ring[tx_ring_index].addr = (uint64)m->head;
     tx_ring[tx_ring_index].length = m->len;
-    if(m->next){
-      tx_ring[tx_ring_index].cmd = 0;
-    }else {
-      tx_ring[tx_ring_index].cmd = 1;// indicate this mbuf is the last buf to send. 
-    }
+    // the EOP bit should be set. If not, it won't be able to make up a packet to send.
+    tx_ring[tx_ring_index].cmd = E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS ;// indicate this mbuf is the last buf to send. 
     tx_mbufs[tx_ring_index] = m; // for later freeing.
     regs[E1000_TDT] = (1+regs[E1000_TDT])%TX_RING_SIZE;
     release(&e1000_lock);
@@ -138,6 +135,7 @@ e1000_recv(void)
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
   //printf("e1000_recv start:\n");
+  while (1) {
   acquire(&e1000_lock);
   int ring_index = (regs[E1000_RDT]+1)%RX_RING_SIZE;
   if(rx_ring[ring_index].status & E1000_RXD_STAT_DD){
@@ -155,6 +153,8 @@ e1000_recv(void)
   }else{
     // just stop and do nothing.
     release(&e1000_lock);
+    return;
+  }
   }
 }
 
