@@ -6,6 +6,10 @@
 
 static int nthread = 1;
 static int round = 0;
+static int goingout = 0;
+static int count =0;
+pthread_mutex_t lock;
+pthread_mutex_t golock;
 
 struct barrier {
   pthread_mutex_t barrier_mutex;
@@ -30,8 +34,24 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
-  
+  pthread_mutex_lock(&bstate.barrier_mutex);
+  bstate.nthread++;
+  if(bstate.nthread == nthread){
+    // now the thread all come and it's time to start a new round.
+    bstate.nthread = 0;
+    bstate.round ++;
+    pthread_mutex_unlock(&bstate.barrier_mutex);
+    //printf("round %d\n",bstate.round);
+    pthread_cond_broadcast(&bstate.barrier_cond);
+  }else {
+    while (bstate.nthread !=0) {
+      pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+    }
+    pthread_mutex_unlock(&bstate.barrier_mutex);
+  }
 }
+
+
 
 static void *
 thread(void *xa)
