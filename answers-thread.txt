@@ -1,0 +1,2 @@
+I think the reason is :with parallel programming,two threads may try to operate on one object without using lock,and
+the result is the latter thread will overwrite the former thread's operation.
