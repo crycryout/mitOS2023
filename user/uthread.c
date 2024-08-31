@@ -2,6 +2,28 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+/**
+ * I've been debugging it for so long, every time I call uthread in qemu, there will only be
+ * C thread that print messages, I use gdb to debug, and I find every time when the cpu start execute in the
+ * create b thread, thread a's state will be set FREE, and when in C create , b's state will be
+ * set FREE, I see the assembler code and find that , It's an store sp instruction did that,
+ * so , it must be someting wrong to the stack, I think the stack may be small, so the code overlay,I tried to give a 
+ * bigger stack, it failed still, I move the field of stack, context , and state, in some situration , even c won't print,and in
+ * another situation, the program crashed.
+ * and I also tried to alloc a stack on the heap...., and when do that, the program just crashed.
+ * I know the problem is on the stack, but I just don't know how to deal with it.
+ * one morning has passed and I'm too hungry, and I think it's time to just give up and seach the internet for 
+ * answer, It turns out that I just forget the stack is goes downside and should initialize the sp with the higher address
+ * no wonder why the program will crash when I change the order of stack and state, context. because an stack overflow happens and
+ * it just write my context and state fields with garbage!!!
+ * */
+
+/*
+ * another part I need to note is , when I add t->state = RUNNABLE , the program can't print, at first I don't know why.
+ * and after I look through the code, it turns out not only yiled will call schedule, but main and other stuff will call, 
+ * and only the yield will call it after set the state to RUNNABLE, others might set the state as FREE, and If I set the
+ * state into RUNNABLE, of coure the program will fail. I think one possible thing is: the main will just exit. and the code won't work any more.
+ * */
 /* Possible states of a thread: */
 #define FREE        0x0
 #define RUNNING     0x1
@@ -10,11 +32,31 @@
 #define STACK_SIZE  8192
 #define MAX_THREAD  4
 
+struct context {
+  uint64 ra;
+  uint64 sp;
+
+  // callee-saved
+  uint64 s0;
+  uint64 s1;
+  uint64 s2;
+  uint64 s3;
+  uint64 s4;
+  uint64 s5;
+  uint64 s6;
+  uint64 s7;
+  uint64 s8;
+  uint64 s9;
+  uint64 s10;
+  uint64 s11;
+};
 
 struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
+  struct context *context;
 };
+
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
 extern void thread_switch(uint64, uint64);
@@ -27,6 +69,7 @@ thread_init(void)
   // save thread 0's state.
   current_thread = &all_thread[0];
   current_thread->state = RUNNING;
+  current_thread->context = malloc(sizeof(struct context));
 }
 
 void 
@@ -60,6 +103,8 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    //t->state = RUNNABLE; 
+    thread_switch((uint64)t->context, (uint64)current_thread->context);
   } else
     next_thread = 0;
 }
@@ -74,6 +119,9 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
+  t->context = malloc(sizeof(struct context));
+  t->context->ra = (uint64)func;
+  t->context->sp = (uint64)((char*)t->stack+STACK_SIZE);
 }
 
 void 
