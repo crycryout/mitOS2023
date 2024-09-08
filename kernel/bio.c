@@ -23,11 +23,12 @@
 #include "fs.h"
 #include "buf.h"
 
-#define NHASH 17
+#define NHASH 27
 
 struct {
   struct spinlock lock;
   struct spinlock hashlocks[NHASH];
+  struct spinlock buflocks[NBUF];
   struct buf buf[NBUF];
 
   // Linked list of all buffers, through prev/next.
@@ -47,15 +48,12 @@ binit(void)
     initlock(&bcache.hashlocks[i], "bcache");
   }
 
-  // Create linked list of buffers
-  //bcache.head.prev = &bcache.head;
-  //bcache.head.next = &bcache.head;
+  for (int i = 0; i < NBUF; i++) {
+    initlock(&bcache.buflocks[i], "buflocks");
+  }
+
   for(b = bcache.buf; b < bcache.buf+NBUF; b++){
-    //b->next = bcache.head.next;
-    //b->prev = &bcache.head;
     initsleeplock(&b->lock, "buffer");
-    //bcache.head.next->prev = b;
-    //bcache.head.next = b;
   }
 }
 
@@ -82,18 +80,22 @@ bget(uint dev, uint blockno)
   }
   release(&bcache.hashlocks[hash]);
   // Not cached.
-  acquire(&bcache.lock);
   for (int i = 0 ;i < NBUF;i++) { 
+    acquire(&bcache.hashlocks[hash]);
+    acquire(&bcache.buflocks[i]);
     b = &bcache.buf[i];
     if(b->refcnt == 0) {
       b->dev = dev;
       b->blockno = blockno;
       b->valid = 0;
       b->refcnt = 1;
-      release(&bcache.lock);
+      release(&bcache.buflocks[i]);
+      release(&bcache.hashlocks[hash]);
       acquiresleep(&b->lock);
       return b;
     }
+    release(&bcache.buflocks[i]);
+    release(&bcache.hashlocks[hash]);
   }
   panic("bget: no buffers");
 }
@@ -126,12 +128,13 @@ bwrite(struct buf *b)
 void
 brelse(struct buf *b)
 {
+  int hash = b->blockno % NHASH;
   if(!holdingsleep(&b->lock))
     panic("brelse");
 
   releasesleep(&b->lock);
 
-  acquire(&bcache.lock);
+  acquire(&bcache.hashlocks[hash]);
   b->refcnt--;
   //if (b->refcnt == 0) {
     // no one is waiting for it.
@@ -143,21 +146,23 @@ brelse(struct buf *b)
     //bcache.head.next = b;
   //}
   
-  release(&bcache.lock);
+  release(&bcache.hashlocks[hash]);
 }
 
 void
 bpin(struct buf *b) {
-  acquire(&bcache.lock);
+  int hash = b->blockno % NHASH;
+  acquire(&bcache.hashlocks[hash]);
   b->refcnt++;
-  release(&bcache.lock);
+  release(&bcache.hashlocks[hash]);
 }
 
 void
 bunpin(struct buf *b) {
-  acquire(&bcache.lock);
+  int hash = b->blockno % NHASH;
+  acquire(&bcache.hashlocks[hash]);
   b->refcnt--;
-  release(&bcache.lock);
+  release(&bcache.hashlocks[hash]);
 }
 
 

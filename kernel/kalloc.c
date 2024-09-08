@@ -52,6 +52,7 @@ void
 kfree(void *pa)
 {
   struct run *r;
+  push_off();
   int i =cpuid();
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
@@ -66,6 +67,7 @@ kfree(void *pa)
   r->next = kmem[i].freelist;
   kmem[i].freelist = r;
   release(&kmem[i].lock);
+  pop_off();
 }
 
 int kmem_borrow(struct run **r,int cpuid){
@@ -90,6 +92,7 @@ void *
 kalloc(void)
 {
   struct run *r;
+  push_off();
   int i = cpuid();
 
   acquire(&kmem[i].lock);
@@ -103,9 +106,6 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  pop_off();
   return (void*)r;
-  
-  if(!r){
-    // try to borrow free memory from other cpu.
-  }
 }
