@@ -67,19 +67,22 @@ bget(uint dev, uint blockno)
 {
   struct buf *b;
 
-  acquire(&bcache.lock);
+  int hash = blockno % NHASH;
+  acquire(&bcache.hashlocks[hash]);
 
   // Is the block already cached?
   for (int i = 0; i < NBUF; i++) {
     b = &bcache.buf[i];
     if(b->dev == dev && b->blockno == blockno){
       b->refcnt++;
-      release(&bcache.lock);
+      release(&bcache.hashlocks[hash]);
       acquiresleep(&b->lock);
       return b;
     } 
   }
+  release(&bcache.hashlocks[hash]);
   // Not cached.
+  acquire(&bcache.lock);
   for (int i = 0 ;i < NBUF;i++) { 
     b = &bcache.buf[i];
     if(b->refcnt == 0) {
